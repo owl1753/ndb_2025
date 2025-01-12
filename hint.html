@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>힌트 찾기</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .input-field {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            border-radius: 12px;
+        }
+        .input-field:focus {
+            border-color: #f6d365;
+            box-shadow: 0 0 0 3px rgba(246, 211, 101, 0.3);
+            outline: none;
+        }
+        .submit-button {
+            background: linear-gradient(45deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .submit-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .submit-button:active {
+            transform: translateY(0);
+        }
+        .result-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+        @media (max-width: 640px) {
+            .container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+    <div class="container max-w-md mx-auto">
+        <form class="bg-white p-8 rounded-2xl shadow-lg space-y-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-8 text-center">힌트 찾기</h1>
+            
+            <div class="space-y-2">
+                <label class="block text-lg font-medium text-gray-700" for="name">
+                    이름
+                </label>
+                <input 
+                    class="input-field w-full px-4 py-3 text-lg"
+                    id="name"
+                    placeholder="이름을 입력하세요"
+                />
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-lg font-medium text-gray-700" for="postid">
+                    포스트 번호
+                </label>
+                <input 
+                    class="input-field w-full px-4 py-3 text-lg"
+                    id="postid"
+                    placeholder="포스트 번호를 입력하세요"
+                    type="number"
+                />
+            </div>
+
+            <button 
+                id="button"
+                type="submit"
+                class="submit-button w-full py-4 text-lg font-semibold text-white rounded-xl"
+            >
+                힌트 보기
+            </button>
+
+            <div class="result-card p-6 mt-6">
+                <p class="text-lg text-gray-700">
+                    <span id="hintname"></span>의 짝에 대한 힌트는
+                </p>
+                <p class="text-xl font-bold text-gray-900 mt-2">
+                    <span id="result">아직 없습니다</span>
+                </p>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let matchingData, hintData, hintIndex;
+
+        function parseCSV(csvText) {
+            const rows = csvText.split('\n').filter(row => row.trim());
+            const headers = splitCSVLine(rows[0]);
+            
+            const jsonData = rows.slice(1).map(row => {
+                const values = splitCSVLine(row);
+                const obj = {};
+                headers.forEach((header, index) => {
+                    let value = values[index] || '';
+                    if (!isNaN(value) && value !== '') {
+                        value = Number(value);
+                    }
+                    obj[header] = value;
+                });
+                return obj;
+            });
+
+            // 이름별로 가장 최신 데이터만 남기기
+            const latestData = Object.values(jsonData.reduce((acc, current) => {
+                const name = current['이름과 세례명 ex) 심민성 예로니모'];
+                const currentTimestamp = new Date(current['타임스탬프']);
+                
+                // 이미 있는 데이터의 타임스탬프와 비교
+                if (!acc[name] || new Date(acc[name]['타임스탬프']) < currentTimestamp) {
+                    acc[name] = current;
+                }
+                
+                return acc;
+            }, {}));
+
+            return latestData;
+        }
+
+        function splitCSVLine(line) {
+            const result = [];
+            let cell = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    if (inQuotes && line[i + 1] === '"') {
+                        cell += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    result.push(cell.trim());
+                    cell = '';
+                } else {
+                    cell += char;
+                }
+            }
+            
+            if (cell) {
+                result.push(cell.trim());
+            }
+            
+            return result;
+        }
+
+        fetch('./matching.json')
+            .then(response => response.json())
+            .then(data => {
+                matchingData = data;
+            })
+            .catch(error => console.error('Error:', error));
+
+        fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSc1ocS9DsZs24cm12htfnnnhjx2B8b-trCZUtplj9Ti-zMNW7zlF0syZbX7HjC5KuhME5jwuLWBaxk/pub?output=csv')
+            .then(response => response.text())
+            .then(csvText => {
+                hintData = parseCSV(csvText);
+            })
+            .catch(error => console.error('Error:', error));
+
+        fetch('./hintIndex.json')
+            .then(response => response.json())
+            .then(data => {
+                hintIndex = data;
+            })
+            .catch(error => console.error('Error:', error));
+        
+        document
+            .getElementById("button")
+            .addEventListener("click", (e) => {
+                e.preventDefault();
+
+                const name = document.getElementById("name").value;
+                const postid = document.getElementById("postid").value;
+
+                if (!name || !postid) {
+                    document.getElementById("result").textContent = "이름과 포스트 번호를 모두 입력해주세요";
+                    return;
+                }
+
+                if (!matchingData[name]) {
+                    document.getElementById("result").textContent = "해당하는 이름을 찾을 수 없습니다";
+                    return;
+                }
+
+                const student = hintData.find(student => 
+                    student['이름과 세례명 ex) 심민성 예로니모'].includes(matchingData[name])
+                );
+
+                // 원본 데이터를 유지하면서 새로운 객체 생성
+                const hints = student ? 
+                Object.entries(student)
+                    .filter(([key]) => 
+                        key !== '이름과 세례명 ex) 심민성 예로니모' && 
+                        key !== '타임스탬프'
+                    )
+                    .map(([_, value]) => value) 
+                : null;
+
+                document.getElementById("hintname").textContent = name;
+
+                if (hints && hintIndex[name][postid - 1]) {
+                    document.getElementById("result").textContent = hints[hintIndex[name][postid - 1]];
+                } else {
+                    document.getElementById("result").textContent = "해당하는 힌트를 찾을 수 없습니다";
+                }
+            });
+    </script>
+</body>
+</html>

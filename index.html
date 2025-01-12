@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            background-color: #f0f2f5;
+            font-family: 'Arial', sans-serif;
+        }
+
+        form {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 80px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input {
+            font-size: 36px;
+            padding: 10px 20px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #4a90e2;
+            box-shadow: 0 0 10px rgba(74, 144, 226, 0.2);
+        }
+
+        label {
+            font-size: 36px;
+            color: #333;
+        }
+
+        button {
+            font-size: 36px;
+            padding: 15px 30px;
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #357abd;
+            transform: scale(1.05);
+        }
+
+        .result-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        .result-text {
+            font-size: 96px;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .result-text.show {
+            animation: fadeInUp 0.5s forwards;
+        }
+
+        .result-image {
+            width: 300px;
+            display: none;
+            opacity: 0;
+        }
+
+        .result-image.show {
+            display: block;
+            animation: bounceIn 0.8s forwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes bounceIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.3);
+            }
+            50% {
+                opacity: 0.9;
+                transform: scale(1.1);
+            }
+            80% {
+                opacity: 1;
+                transform: scale(0.9);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .suspense {
+            animation: suspenseShake 0.5s ease-in-out;
+        }
+
+        @keyframes suspenseShake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-10px); }
+            40% { transform: translateX(10px); }
+            60% { transform: translateX(-10px); }
+            80% { transform: translateX(10px); }
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <form>
+            <div class="input-group">
+                <label>1번: </label>
+                <input id="1" type="text"/>
+            </div>
+            <div class="input-group">
+                <label>2번: </label>
+                <input id="2" type="text"/>
+            </div>
+            <button type="submit" id="button">결과는?</button>
+        </form>
+
+        <div class="result-container">
+            <div id="3" class="result-text"></div>
+            <img id="heart" class="result-image" src="heart.png"/>
+            <img id="poo" class="result-image" src="poo.png"/>
+            <div id="4" class="result-text"></div>
+        </div>
+    </div>
+
+    <script>
+        let matchingData;
+        fetch('./matching.json')
+            .then(response => response.json())
+            .then(data => {
+                matchingData = data;
+            })
+            .catch(error => console.error('Error:', error));
+        
+        document
+            .getElementById("button")
+            .addEventListener("click", async (e) => {
+                e.preventDefault();
+
+                // 결과를 리셋
+                document.querySelectorAll('.result-text').forEach(el => {
+                    el.classList.remove('show');
+                });
+                document.querySelectorAll('.result-image').forEach(el => {
+                    el.classList.remove('show');
+                });
+
+                // 버튼에 긴박감 효과 추가
+                const button = e.target;
+                button.classList.add('suspense');
+                button.disabled = true;
+                button.textContent = "확인중...";
+
+                // 긴박감을 위한 지연
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                const a = document.getElementById("1").value;
+                const b = document.getElementById("2").value;
+                
+                document.getElementById("3").innerHTML = a;
+                document.getElementById("4").innerHTML = b;
+
+                // 결과 텍스트 표시 애니메이션
+                document.querySelectorAll('.result-text').forEach(el => {
+                    el.classList.add('show');
+                });
+
+                // 이미지 표시 애니메이션
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                if (matchingData[a] === b) {
+                    document.getElementById("heart").classList.add('show');
+                    document.getElementById("poo").classList.remove('show');
+                } else {
+                    document.getElementById("poo").classList.add('show');
+                    document.getElementById("heart").classList.remove('show');
+                }
+
+                // 버튼 상태 복구
+                button.classList.remove('suspense');
+                button.disabled = false;
+                button.textContent = "결과는?";
+            });
+    </script>
+</body>
+</html>
