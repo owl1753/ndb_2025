@@ -211,9 +211,7 @@
                     .map(([_, value]) => value) 
                 : null;
 
-                document.getElementById("hintname").textContent = name;
-
-                if (hints && hintIndex[name][postid - 1]) {
+                if (hints && hintIndex[name][postid - 1] >= 0) {
                     document.getElementById("result").textContent = hints[hintIndex[name][postid - 1]];
                 } else {
                     document.getElementById("result").textContent = "해당하는 힌트를 찾을 수 없습니다";
